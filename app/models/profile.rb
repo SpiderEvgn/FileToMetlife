@@ -2,7 +2,7 @@ class Profile < ApplicationRecord
   require 'csv'
 
   def self.import_csv
-    content = CSV.read('/Users/spiderevgn/project/metlife/profile_2000.csv')
+    content = CSV.read('/Users/spiderevgn/project/metlife/profile_r2_sql.csv')
     content.shift
     content.each do |row|
       Profile.create(
@@ -19,32 +19,42 @@ class Profile < ApplicationRecord
         province: '四川省',
         city: '成都市',
         address: row[12],
-        zipcode: '611330'
+        zipcode: row[13]
         )
     end
   end
 
   def self.start_to_send(present_code)
-    Profile.find_each(batch_size: 200) do |pf|
+    Profile.find_each(batch_size: 100, start: 5557, finish: 5918) do |pf|
     # pc = Array['PC0000000139', 'PC0000000151', 'PC0000000150', 'PC0000000167']
+    # pf = Profile.find(5627)
       response = Profile.send_to_metlife(pf, present_code)
 
       case present_code
       when 'PC0000000139'
-        pf.update(PC139: response)
+        pf.update(PC139: pf.check_response(response.to_s))
         pf.save
       when 'PC0000000151'
-        pf.update(PC151: response)
+        pf.update(PC151: pf.check_response(response.to_s))
         pf.save
       when 'PC0000000150'
-        pf.update(PC150: response)
+        pf.update(PC150: pf.check_response(response.to_s))
         pf.save
       when 'PC0000000167'
-        pf.update(PC167: response)
+        pf.update(PC167: pf.check_response(response.to_s))
         pf.save
       end
     end
+  end
 
+  def check_response(response)
+    reg1 = /Flag&gt;(.*)&lt;\/Flag/
+    reg1.match(response)
+    if $1.include?('FALSE')
+      reg2 = /Message&gt;(.*)&lt;\/Message/
+      reg2.match(response)
+    end
+    return $1
   end
 
   # Build xml file.
@@ -211,68 +221,69 @@ class Profile < ApplicationRecord
     end
   end
 
-  def self.generate_wrong_message
-    CSV.open("/Users/spiderevgn/project/metlife/wrong_message.csv", "wb") do |csv|
-      csv << ["PC139", "PC150", "PC151", "PC167"]
-      Profile.find_each(batch_size: 200) do |pf|
-        csv << [
-          pf.PC139.include?('FALSE') ? pf.PC139 : " ",
-          pf.PC150.include?('FALSE') ? pf.PC150 : " ",
-          pf.PC151.include?('FALSE') ? pf.PC151 : " ",
-          pf.PC167.include?('FALSE') ? pf.PC167 : " "
-        ]
-      end
-    end
-  end
+  # 第一次传2000条时结果检测用的方法，之后传输时对response加了正则判断，以下方法就不用了
+#   def self.generate_wrong_message
+#     CSV.open("/Users/spiderevgn/project/metlife/wrong_message.csv", "wb") do |csv|
+#       csv << ["PC139", "PC150", "PC151", "PC167"]
+#       Profile.find_each(batch_size: 200) do |pf|
+#         csv << [
+#           pf.PC139.include?('FALSE') ? pf.PC139 : " ",
+#           pf.PC150.include?('FALSE') ? pf.PC150 : " ",
+#           pf.PC151.include?('FALSE') ? pf.PC151 : " ",
+#           pf.PC167.include?('FALSE') ? pf.PC167 : " "
+#         ]
+#       end
+#     end
+#   end
 
-  def self.check_wrong_item_number
-    all = 0
-    repeat = 0
-    idnum = 0
-    Profile.all.each do |pf|
-      if pf.PC139.include?('FALSE')
-        all += 1
-      end
-      if pf.PC150.include?('FALSE')
-        all += 1
-      end
-      if pf.PC151.include?('FALSE')
-        all += 1
-      end
-      if pf.PC167.include?('FALSE')
-        all += 1
-      end
+#   def self.check_wrong_item_number
+#     all = 0
+#     repeat = 0
+#     idnum = 0
+#     Profile.all.each do |pf|
+#       if pf.PC139.include?('FALSE')
+#         all += 1
+#       end
+#       if pf.PC150.include?('FALSE')
+#         all += 1
+#       end
+#       if pf.PC151.include?('FALSE')
+#         all += 1
+#       end
+#       if pf.PC167.include?('FALSE')
+#         all += 1
+#       end
 
-      if pf.PC139.include?('&#x5BFC;&#x5165')
-        repeat += 1
-      end
-      if pf.PC150.include?('&#x5BFC;&#x5165')
-        repeat += 1
-      end
-      if pf.PC151.include?('&#x5BFC;&#x5165')
-        repeat += 1
-      end
-      if pf.PC167.include?('&#x5BFC;&#x5165')
-        repeat += 1
-      end
+#       if pf.PC139.include?('&#x5BFC;&#x5165')
+#         repeat += 1
+#       end
+#       if pf.PC150.include?('&#x5BFC;&#x5165')
+#         repeat += 1
+#       end
+#       if pf.PC151.include?('&#x5BFC;&#x5165')
+#         repeat += 1
+#       end
+#       if pf.PC167.include?('&#x5BFC;&#x5165')
+#         repeat += 1
+#       end
 
-      if pf.PC139.include?('&#x4E8E;18&#x4F4D;')
-        idnum += 1
-      end
-      if pf.PC150.include?('&#x4E8E;18&#x4F4D;')
-        idnum += 1
-      end
-      if pf.PC151.include?('&#x4E8E;18&#x4F4D;')
-        idnum += 1
-      end
-      if pf.PC167.include?('&#x4E8E;18&#x4F4D;')
-        idnum += 1
-      end
+#       if pf.PC139.include?('&#x4E8E;18&#x4F4D;')
+#         idnum += 1
+#       end
+#       if pf.PC150.include?('&#x4E8E;18&#x4F4D;')
+#         idnum += 1
+#       end
+#       if pf.PC151.include?('&#x4E8E;18&#x4F4D;')
+#         idnum += 1
+#       end
+#       if pf.PC167.include?('&#x4E8E;18&#x4F4D;')
+#         idnum += 1
+#       end
 
-    end
-    puts "-------------------------------"
-    puts "all: " + all.to_s
-    puts "repeat: " + repeat.to_s
-    puts "idnum: " + idnum.to_s
-  end
+#     end
+#     puts "-------------------------------"
+#     puts "all: " + all.to_s
+#     puts "repeat: " + repeat.to_s
+#     puts "idnum: " + idnum.to_s
+#   end
 end
