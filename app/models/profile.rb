@@ -61,7 +61,7 @@ class Profile < ApplicationRecord
 
   class << self
     def import_csv
-      content = CSV.read('/Users/spiderevgn/project/metlife/profile_r2_sql.csv')
+      content = CSV.read('/Users/spiderevgn/project/metlife/2017_06_25_2.csv')
       content.shift
       content.each do |row|
         Profile.create(
@@ -72,35 +72,70 @@ class Profile < ApplicationRecord
           id_num: row[4],
           email: row[5],
           cellphone: row[6],
-          employer: '成都市政府',
-          occupation: '公务员',
+          employer: row[7],
+          occupation: row[8],
           position: row[9],
-          province: '四川省',
-          city: '成都市',
+          province: row[10],
+          city: row[11],
           address: row[12],
           zipcode: row[13]
           )
       end
     end
 
-    def start_to_send(present_code)
-      Profile.find_each(batch_size: 100, start: 5557, finish: 5918) do |pf|
-      # pc = Array['PC0000000139', 'PC0000000151', 'PC0000000150', 'PC0000000167']
-        response = Profile.send_to_metlife(pf, present_code)
+    def import_xlsx
+      content = Roo::Spreadsheet.open('/Users/spiderevgn/project/metlife/2017_06_25_2.xlsx')
+      # 姓名,身份证,邮箱,电话,单位名称,职业,职级,省份,城市,地址,邮编
+      num = content.sheet('Sheet1').count
+      content.sheet('Sheet1').first(num).each do |row|
+        fullname  = row[0].gsub(' ','')
+        # 512928197108036312
+        year  = row[1][6..9]
+        month = row[1][10..11]
+        day   = row[1][12..13]
 
-        case present_code
-        when 'PC0000000139'
-          pf.update(PC139: pf.check_response(response.to_s))
-          pf.save
-        when 'PC0000000151'
-          pf.update(PC151: pf.check_response(response.to_s))
-          pf.save
-        when 'PC0000000150'
-          pf.update(PC150: pf.check_response(response.to_s))
-          pf.save
-        when 'PC0000000167'
-          pf.update(PC167: pf.check_response(response.to_s))
-          pf.save
+        unless 2017 - year.to_i > 60
+          Profile.create(
+            firstname: fullname[0],
+            lastname: fullname[1..-1],
+            gender: row[1][-2] == 1 ? '男' : '女',
+            birthday: year + '-' + month + '-' + day,
+            id_num: row[1],
+            email: row[2],
+            cellphone: row[3],
+            employer: row[4],
+            occupation: row[5],
+            position: row[6],
+            province: row[7],
+            city: row[8],
+            address: row[9],
+            zipcode: row[10]
+            )
+        end
+      end
+    end
+
+    def start_to_send
+      # Profile.find_each(batch_size: 100, start: 5936, finish: 5918) do |pf|
+      Profile.find_each(start: 7204) do |pf|
+        # pf = Profile.find(6203);
+      # Profile.last(3).each do |pf|
+        ['PC0000000139', 'PC0000000151', 'PC0000000150', 'PC0000000167'].each do |present_code|
+          response = Profile.send_to_metlife(pf, present_code)
+          case present_code
+          when 'PC0000000139'
+            pf.update(PC139: pf.check_response(response.to_s))
+            pf.save
+          when 'PC0000000151'
+            pf.update(PC151: pf.check_response(response.to_s))
+            pf.save
+          when 'PC0000000150'
+            pf.update(PC150: pf.check_response(response.to_s))
+            pf.save
+          when 'PC0000000167'
+            pf.update(PC167: pf.check_response(response.to_s))
+            pf.save
+          end
         end
       end
     end
@@ -212,9 +247,9 @@ class Profile < ApplicationRecord
     end
 
     def to_csv
-      CSV.open("/Users/spiderevgn/project/metlife/response.csv", "wb") do |csv|
+      CSV.open("/Users/spiderevgn/project/metlife/response_0422.csv", "wb") do |csv|
         csv << FILE_HEADER
-        Profile.find_each(batch_size: 200) do |pf|
+        Profile.find_each(start: 5960) do |pf|
           csv << pf.profile_row_info
         end
       end
