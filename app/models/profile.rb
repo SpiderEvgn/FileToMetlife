@@ -93,8 +93,11 @@ class Profile < ApplicationRecord
         year  = row[1][6..9]
         month = row[1][10..11]
         day   = row[1][12..13]
-
-        unless 2017 - year.to_i > 60
+        
+        errorProfiles = []
+        if row[1].count != 18 || row[3].count != 11 || 2017 - year.to_i > 60
+          errorProfiles << [fullname, row[1], row[3]]
+        else
           Profile.create(
             firstname: fullname[0],
             lastname: fullname[1..-1],
@@ -111,6 +114,15 @@ class Profile < ApplicationRecord
             address: row[9],
             zipcode: row[10]
             )
+        end
+      end
+
+      if errorProfiles.count > 0
+        CSV.open("/Users/spiderevgn/project/metlife/xlsx_import_errors.csv", "wb") do |csv|
+          csv << %W[姓名 身份证 电话]
+          errorProfiles.each do |pf|
+            csv << pf.errorProfiles
+          end
         end
       end
     end
