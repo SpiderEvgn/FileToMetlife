@@ -1,6 +1,9 @@
 class Profile < ApplicationRecord
   require 'csv'
 
+  validates :id_num, presence: true, uniqueness: true
+  validates :cellphone, presence: true, uniqueness: true
+
   FILE_HEADER = %W[
     姓
     名
@@ -83,34 +86,49 @@ class Profile < ApplicationRecord
       end
     end
 
-    def import_xlsx
-      content = Roo::Spreadsheet.open('/Users/spiderevgn/project/metlife/2017_06_25_2.xlsx')
+    def import_xlsx(file_name)
+      content = Roo::Spreadsheet.open('/Users/spiderevgn/project/metlife/' + file_name + '.xlsx')
+      errorProfiles = []
       # 姓名,身份证,邮箱,电话,单位名称,职业,职级,省份,城市,地址,邮编
       num = content.sheet('Sheet1').count
       content.sheet('Sheet1').first(num).each do |row|
+        # 要加个判断，如果这一批里面有手机号或身份证重复的，直接都输出
         fullname  = row[0].gsub(' ','')
+        id_num    = row[1].to_s.gsub(' ','')
+        cellphone = row[3].to_s.gsub(' ','')
         # 512928197108036312
-        year  = row[1][6..9]
-        month = row[1][10..11]
-        day   = row[1][12..13]
+        year  = id_num[6..9]
+        month = id_num[10..11]
+        day   = id_num[12..13]
         
-        errorProfiles = []
-        if row[1].count != 18 || row[3].count != 11 || 2017 - year.to_i > 60
-          errorProfiles << [fullname, row[1], row[3]]
+        if id_num == ''
+          errorProfiles << [fullname, id_num, cellphone, '缺少身份证']
+        elsif cellphone == ''
+          errorProfiles << [fullname, id_num, cellphone, '缺少手机号']
+        elsif id_num.length != 18
+          errorProfiles << [fullname, id_num, cellphone, '身份证位数不对']
+        elsif cellphone.length != 11 
+          errorProfiles << [fullname, id_num, cellphone, '手机号位数不对']
+        elsif 2017 - year.to_i > 60
+          errorProfiles << [fullname, id_num, cellphone, '年龄大于60岁']
+        elsif Profile.find_by_cellphone(cellphone)
+          errorProfiles << [fullname, id_num, cellphone, '数据重复']
         else
           Profile.create(
             firstname: fullname[0],
             lastname: fullname[1..-1],
-            gender: row[1][-2] == 1 ? '男' : '女',
+            gender: id_num[-2].even? ? '女' : '男',
             birthday: year + '-' + month + '-' + day,
-            id_num: row[1],
+            id_num: id_num.to_s,
             email: row[2],
-            cellphone: row[3],
+            cellphone: cellphone.to_s,
             employer: row[4],
             occupation: row[5],
             position: row[6],
-            province: row[7],
-            city: row[8],
+            # province: row[7],
+            province: '四川省',
+            # city: row[8],
+            city: '成都市',
             address: row[9],
             zipcode: row[10]
             )
@@ -118,18 +136,18 @@ class Profile < ApplicationRecord
       end
 
       if errorProfiles.count > 0
-        CSV.open("/Users/spiderevgn/project/metlife/xlsx_import_errors.csv", "wb") do |csv|
+        CSV.open("/Users/spiderevgn/project/metlife/error/xlsx_import_errors_2017_06_25_3.csv", "wb") do |csv|
           csv << %W[姓名 身份证 电话]
           errorProfiles.each do |pf|
-            csv << pf.errorProfiles
+            csv << pf
           end
         end
       end
     end
 
-    def start_to_send
+    def start_to_send(start_num)
       # Profile.find_each(batch_size: 100, start: 5936, finish: 5918) do |pf|
-      Profile.find_each(start: 7204) do |pf|
+      Profile.find_each(start: start_num) do |pf|
         # pf = Profile.find(6203);
       # Profile.last(3).each do |pf|
         ['PC0000000139', 'PC0000000151', 'PC0000000150', 'PC0000000167'].each do |present_code|
