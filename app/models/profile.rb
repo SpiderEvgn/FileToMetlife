@@ -87,15 +87,24 @@ class Profile < ApplicationRecord
     end
 
     def import_xlsx(file_name)
-      content = Roo::Spreadsheet.open('/Users/spiderevgn/project/metlife/' + file_name + '.xlsx')
+      content = Roo::Spreadsheet.open('/Users/spiderevgn/project/metlife/import_data/' + file_name + '.xlsx')
+      correctProfiles = []
       errorProfiles = []
       # 姓名,身份证,邮箱,电话,单位名称,职业,职级,省份,城市,地址,邮编
       num = content.sheet('Sheet1').count
       content.sheet('Sheet1').first(num).each do |row|
         # 要加个判断，如果这一批里面有手机号或身份证重复的，直接都输出
-        fullname  = row[0].gsub(' ','')
-        id_num    = row[1].to_s.gsub(' ','')
-        cellphone = row[3].to_s.gsub(' ','')
+        fullname   = row[0].to_s.gsub(' ','')
+        id_num     = row[1].to_s.gsub(' ','')
+        email      = row[2].to_s.gsub(' ','')
+        cellphone  = row[3].to_s.gsub(' ','')
+        employer   = row[4].to_s.gsub(' ','')
+        occupation = row[5].to_s.gsub(' ','')
+        position   = row[6].to_s.gsub(' ','')
+        province   = row[7].to_s.gsub(' ','')
+        city       = row[8].to_s.gsub(' ','')
+        address    = row[9].to_s.gsub(' ','')
+        zipcode    = row[10].to_s.gsub(' ','')
         # 512928197108036312
         year  = id_num[6..9]
         month = id_num[10..11]
@@ -117,27 +126,50 @@ class Profile < ApplicationRecord
           Profile.create(
             firstname: fullname[0],
             lastname: fullname[1..-1],
-            gender: id_num[-2].even? ? '女' : '男',
+            gender: id_num[-2].to_i.even? ? '女' : '男',
             birthday: year + '-' + month + '-' + day,
-            id_num: id_num.to_s,
-            email: row[2],
-            cellphone: cellphone.to_s,
-            employer: row[4],
-            occupation: row[5],
-            position: row[6],
-            # province: row[7],
-            province: '四川省',
-            # city: row[8],
-            city: '成都市',
-            address: row[9],
-            zipcode: row[10]
+            id_num: id_num,
+            email: email,
+            cellphone: cellphone,
+            employer: employer,
+            occupation: occupation,
+            position: position,
+            province: province=='' ? '四川省' : province,
+            city: city=='' ? '成都市' : city,
+            address: address,
+            zipcode: zipcode
             )
+          # 这里应该是导入成功，传输成功的逻辑在以后增改
+          correctProfiles << [
+            fullname,
+            id_num,
+            cellphone,
+            '传输成功'
+            # fullname[0],
+            # fullname[1..-1],
+            # id_num[-2].to_i.even? ? '女' : '男',
+            # year + '-' + month + '-' + day,
+            # id_num,
+            # email,
+            # cellphone,
+            # employer,
+            # occupation,
+            # position,
+            # province=='' ? '四川省' : province,
+            # city=='' ? '成都市' : city,
+            # address,
+            # zipcode
+          ]
         end
       end
 
       if errorProfiles.count > 0
-        CSV.open("/Users/spiderevgn/project/metlife/error/xlsx_import_errors_2017_06_25_3.csv", "wb") do |csv|
+        CSV.open("/Users/spiderevgn/project/metlife/error/xlsx_import_errors_2017_06_26.csv", "wb") do |csv|
           csv << %W[姓名 身份证 电话]
+          correctProfiles.each do |pf|
+            csv << pf
+          end
+          csv << ['华丽' '丽的' '分割' '线']
           errorProfiles.each do |pf|
             csv << pf
           end
@@ -147,8 +179,8 @@ class Profile < ApplicationRecord
 
     def start_to_send(start_num)
       # Profile.find_each(batch_size: 100, start: 5936, finish: 5918) do |pf|
-      Profile.find_each(start: start_num) do |pf|
-        # pf = Profile.find(6203);
+      # Profile.find_each(start: start_num) do |pf|
+        pf = Profile.find(start_num);
       # Profile.last(3).each do |pf|
         ['PC0000000139', 'PC0000000151', 'PC0000000150', 'PC0000000167'].each do |present_code|
           response = Profile.send_to_metlife(pf, present_code)
@@ -167,7 +199,7 @@ class Profile < ApplicationRecord
             pf.save
           end
         end
-      end
+      # end
     end
 
     # Build xml file.
