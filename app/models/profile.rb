@@ -88,41 +88,89 @@ class Profile < ApplicationRecord
 
     def import_xlsx(file_name)
       content = Roo::Spreadsheet.open('/Users/spiderevgn/project/metlife/import_data/' + file_name + '.xlsx')
+      data_all = content.sheet('Sheet1').to_a
+      data_all.shift
+      # 去空格
+      data_all.each do |row|
+        11.times do |index|
+          row[index] ? row[index] = row[index].to_s.gsub(' ','') : row[index]
+        end
+      end
       correctProfiles = []
       errorProfiles = []
+      row_repeat_checkpoint = 0
+
       # 姓名,身份证,邮箱,电话,单位名称,职业,职级,省份,城市,地址,邮编
-      num = content.sheet('Sheet1').count
-      content.sheet('Sheet1').first(num).each do |row|
-        # 要加个判断，如果这一批里面有手机号或身份证重复的，直接都输出
-        fullname   = row[0].to_s.gsub(' ','')
-        id_num     = row[1].to_s.gsub(' ','')
-        email      = row[2].to_s.gsub(' ','')
-        cellphone  = row[3].to_s.gsub(' ','')
-        employer   = row[4].to_s.gsub(' ','')
-        occupation = row[5].to_s.gsub(' ','')
-        position   = row[6].to_s.gsub(' ','')
-        province   = row[7].to_s.gsub(' ','')
-        city       = row[8].to_s.gsub(' ','')
-        address    = row[9].to_s.gsub(' ','')
-        zipcode    = row[10].to_s.gsub(' ','')
-        # 512928197108036312
-        year  = id_num[6..9]
-        month = id_num[10..11]
-        day   = id_num[12..13]
+      # 本次导入表内数据查重
+      data_all.each_with_index do |row, index|
+        data_all[index+1..-1].each do |next_row|
+          if row[1] == next_row[1]
+            next_row[11] = '表内：身份证与'+row[0]+'重复'
+            row_repeat_checkpoint = 1
+          elsif row[3] == next_row[3]
+            next_row[11] = '表内：手机号与'+row[0]+'重复'
+            row_repeat_checkpoint = 1
+          end
+        end
+        if row_repeat_checkpoint == 1
+          row[11] = '表内：数据重复'
+        end
+        row_repeat_checkpoint = 0
+      end
+
+      # 去掉重复数据后过滤到 data
+      data = []
+      data_all.each do |row|
+        if row[11]
+          errorProfiles << [row[0], row[1], row[3], row[11]]
+        else
+          data << row
+        end
+      end # data_all.each
+
+      # 在去重后的 data 中做数据验证
+      time = Time.new
+      data.each do |row|
+        fullname   = row[0]
+        id_num     = row[1]
+        email      = row[2]
+        cellphone  = row[3]
+        employer   = row[4]
+        occupation = row[5]
+        position   = row[6]
+        province   = row[7]
+        city       = row[8]
+        address    = row[9]
+        zipcode    = row[10]
+        # 身份证例子: 512928197108036312
+        birthday = id_num ? id_num[6..13] : id_num
+        year  = id_num ? id_num[6..9] : id_num
+        month = id_num ? id_num[10..11] : id_num
+        day   = id_num ? id_num[12..13] : id_num
         
-        if id_num == ''
+        if !id_num
           errorProfiles << [fullname, id_num, cellphone, '缺少身份证']
-        elsif cellphone == ''
+        elsif !cellphone
           errorProfiles << [fullname, id_num, cellphone, '缺少手机号']
         elsif id_num.length != 18
           errorProfiles << [fullname, id_num, cellphone, '身份证位数不对']
+        elsif !(id_num =~ /(x|X|\d)$/)
+          errorProfiles << [fullname, id_num, cellphone, '身份证末位有误']
         elsif cellphone.length != 11 
           errorProfiles << [fullname, id_num, cellphone, '手机号位数不对']
         elsif 2017 - year.to_i > 60
           errorProfiles << [fullname, id_num, cellphone, '年龄大于60岁']
         elsif Profile.find_by_cellphone(cellphone)
-          errorProfiles << [fullname, id_num, cellphone, '数据重复']
+          errorProfiles << [fullname, id_num, cellphone, '数据库：手机号重复']
+        elsif Profile.find_by_id_num(id_num)
+          errorProfiles << [fullname, id_num, cellphone, '数据库：身份证重复']
         else
+          begin 
+            birthday.to_date
+          rescue
+            errorProfiles << [fullname, id_num, cellphone, '生日有误']
+            next
+          end
           Profile.create(
             firstname: fullname[0],
             lastname: fullname[1..-1],
@@ -139,12 +187,11 @@ class Profile < ApplicationRecord
             address: address,
             zipcode: zipcode
             )
-          # 这里应该是导入成功，传输成功的逻辑在以后增改
           correctProfiles << [
             fullname,
             id_num,
             cellphone,
-            '传输成功'
+            '导入成功'
             # fullname[0],
             # fullname[1..-1],
             # id_num[-2].to_i.even? ? '女' : '男',
@@ -160,11 +207,12 @@ class Profile < ApplicationRecord
             # address,
             # zipcode
           ]
-        end
-      end
+        end # if validation
+      end # data.each
 
+      # 结果输出 csv
       if errorProfiles.count > 0
-        CSV.open("/Users/spiderevgn/project/metlife/error/xlsx_import_errors_2017_06_26.csv", "wb") do |csv|
+        CSV.open('/Users/spiderevgn/project/metlife/error/xlsx_import_errors_' + file_name + '.csv', "wb") do |csv|
           csv << %W[姓名 身份证 电话]
           correctProfiles.each do |pf|
             csv << pf
@@ -173,15 +221,14 @@ class Profile < ApplicationRecord
           errorProfiles.each do |pf|
             csv << pf
           end
-        end
-      end
-    end
+        end # CSV.open
+      end # if errorProfiles.count > 0
+    end # def
 
     def start_to_send(start_num)
       # Profile.find_each(batch_size: 100, start: 5936, finish: 5918) do |pf|
-      # Profile.find_each(start: start_num) do |pf|
-        pf = Profile.find(start_num);
-      # Profile.last(3).each do |pf|
+      Profile.find_each(start: start_num) do |pf|
+        # pf = Profile.find(start_num);
         ['PC0000000139', 'PC0000000151', 'PC0000000150', 'PC0000000167'].each do |present_code|
           response = Profile.send_to_metlife(pf, present_code)
           case present_code
@@ -197,10 +244,10 @@ class Profile < ApplicationRecord
           when 'PC0000000167'
             pf.update(PC167: pf.check_response(response.to_s))
             pf.save
-          end
-        end
-      # end
-    end
+          end # case
+        end # ['present_code']
+      end # Profile.find_each
+    end # def
 
     # Build xml file.
     def build_xml_of_free_insurance(profile, present_code)
