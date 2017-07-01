@@ -1,8 +1,21 @@
 class Profile < ApplicationRecord
   require 'csv'
 
+  validates :firstname, presence: true
+  validates :lastname, presence: true
   validates :id_num, presence: true, uniqueness: true
   validates :cellphone, presence: true, uniqueness: true
+
+  COMPOUND_NAME = %W[
+    欧阳 太史 端木 上官 司马 东方 独孤 南宫 万俟 闻人 
+    夏侯 诸葛 尉迟 公羊 赫连 澹台 皇甫 宗政 濮阳 公冶 
+    太叔 申屠 公孙 慕容 仲孙 钟离 长孙 宇文 司徒 鲜于 
+    司空 闾丘 子车 亓官 司寇 巫马 公西 颛孙 壤驷 公良 
+    漆雕 乐正 宰父 谷梁 拓跋 夹谷 轩辕 令狐 段干 百里 
+    呼延 东郭 南门 羊舌 微生 公户 公玉 公仪 梁丘 公仲 
+    公上 公门 公山 公坚 左丘 公伯 西门 公祖 第五 公乘 
+    贯丘 公皙 南荣 东里 东宫 仲长 子书 子桑 即墨 达奚 
+    褚师 吴铭]
 
   FILE_HEADER = %W[
     姓
@@ -94,6 +107,7 @@ class Profile < ApplicationRecord
       data_all.each do |row|
         11.times do |index|
           row[index] ? row[index] = row[index].to_s.gsub(' ','') : row[index]
+          row[index] ? row[index] = row[index].to_s.gsub('　','') : row[index]
         end
       end
       correctProfiles = []
@@ -101,7 +115,7 @@ class Profile < ApplicationRecord
       row_repeat_checkpoint = 0
 
       # 姓名,身份证,邮箱,电话,单位名称,职业,职级,省份,城市,地址,邮编
-      # 本次导入表内数据查重
+      # 当前表内数据查重
       data_all.each_with_index do |row, index|
         data_all[index+1..-1].each do |next_row|
           if row[1] == next_row[1]
@@ -116,7 +130,7 @@ class Profile < ApplicationRecord
           row[11] = '表内：数据重复'
         end
         row_repeat_checkpoint = 0
-      end
+      end # data_all.each_with_index
 
       # 去掉重复数据后过滤到 data
       data = []
@@ -128,8 +142,11 @@ class Profile < ApplicationRecord
         end
       end # data_all.each
 
-      # 在去重后的 data 中做数据验证
+      # 初始化 时间（用于匹配生日）和 姓名
       time = Time.new
+      firstname = ''
+      lastname = ''
+      # 在当前表去重后的 data 中做数据验证 并 存入数据库
       data.each do |row|
         fullname   = row[0]
         id_num     = row[1]
@@ -147,7 +164,24 @@ class Profile < ApplicationRecord
         year  = id_num ? id_num[6..9] : id_num
         month = id_num ? id_num[10..11] : id_num
         day   = id_num ? id_num[12..13] : id_num
-        
+        # 判断复姓
+        # 重置姓名，因为后面有 next 跳出 data.each 循环，所以不能在末尾重置
+        firstname = ''
+        lastname = ''
+        if !fullname
+          errorProfiles << [fullname, id_num, cellphone, '缺少姓名']
+          next
+        else
+          COMPOUND_NAME.each do |fname|
+            if fullname.include? fname
+              firstname = fname
+              lastname  = fullname.gsub(fname,'')
+              break
+            end # if fullname
+          end # COMPOUND_NAME
+        end # if !=fullname
+
+        # 数据验证
         if !id_num
           errorProfiles << [fullname, id_num, cellphone, '缺少身份证']
         elsif !cellphone
@@ -171,9 +205,12 @@ class Profile < ApplicationRecord
             errorProfiles << [fullname, id_num, cellphone, '生日有误']
             next
           end
+          # 姓名识别（已经判断过复姓）
+          firstname = firstname != '' ? firstname : fullname[0]
+          lastname = lastname != '' ? lastname : fullname[1..-1]
           Profile.create(
-            firstname: fullname[0],
-            lastname: fullname[1..-1],
+            firstname: firstname,
+            lastname: lastname,
             gender: id_num[-2].to_i.even? ? '女' : '男',
             birthday: year + '-' + month + '-' + day,
             id_num: id_num,
@@ -188,12 +225,12 @@ class Profile < ApplicationRecord
             zipcode: zipcode
             )
           correctProfiles << [
-            fullname,
+            firstname,
+            lastname,
             id_num,
             cellphone,
             '导入成功'
-            # fullname[0],
-            # fullname[1..-1],
+            # 生成全数据，暂时感觉没必要，以后有需求再开启
             # id_num[-2].to_i.even? ? '女' : '男',
             # year + '-' + month + '-' + day,
             # id_num,
