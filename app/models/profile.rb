@@ -219,8 +219,8 @@ class Profile < ApplicationRecord
             employer: employer,
             occupation: occupation,
             position: position,
-            province: province=='' ? '四川省' : province,
-            city: city=='' ? '成都市' : city,
+            province: province ? province : '四川省',
+            city: city ? city : '成都市',
             address: address,
             zipcode: zipcode
             )
@@ -248,18 +248,16 @@ class Profile < ApplicationRecord
       end # data.each
 
       # 结果输出 csv
-      if errorProfiles.count > 0
-        CSV.open('/Users/spiderevgn/project/metlife/error/xlsx_import_errors_' + file_name + '.csv', "wb") do |csv|
-          csv << %W[姓名 身份证 电话]
-          correctProfiles.each do |pf|
-            csv << pf
-          end
-          csv << ['华丽' '丽的' '分割' '线']
-          errorProfiles.each do |pf|
-            csv << pf
-          end
-        end # CSV.open
-      end # if errorProfiles.count > 0
+      CSV.open('/Users/spiderevgn/project/metlife/error/xlsx_import_errors_' + file_name + '.csv', "wb") do |csv|
+        csv << %W[姓名 身份证 电话]
+        correctProfiles.each do |pf|
+          csv << pf
+        end
+        csv << ['华丽' '丽的' '分割' '线']
+        errorProfiles.each do |pf|
+          csv << pf
+        end
+      end # CSV.open
     end # def
 
     def start_to_send(start_num)
