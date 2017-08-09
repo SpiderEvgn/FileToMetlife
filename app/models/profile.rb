@@ -99,7 +99,7 @@ class Profile < ApplicationRecord
       end
     end
 
-    def import_xlsx(file_name)
+    def import_xlsx(file_name, is_store=nil)
       content = Roo::Spreadsheet.open('/Users/spiderevgn/project/metlife/import_data/' + file_name + '.xlsx')
       data_all = content.sheet('Sheet1').to_a
       data_all.shift
@@ -208,22 +208,24 @@ class Profile < ApplicationRecord
           # 姓名识别（已经判断过复姓）
           firstname = firstname != '' ? firstname : fullname[0]
           lastname = lastname != '' ? lastname : fullname[1..-1]
-          Profile.create(
-            firstname: firstname,
-            lastname: lastname,
-            gender: id_num[-2].to_i.even? ? '女' : '男',
-            birthday: year + '-' + month + '-' + day,
-            id_num: id_num,
-            email: email,
-            cellphone: cellphone,
-            employer: employer,
-            occupation: occupation,
-            position: position,
-            province: province ? province : '四川省',
-            city: city ? city : '成都市',
-            address: address,
-            zipcode: zipcode
-            )
+          if is_store
+            Profile.create(
+              firstname: firstname,
+              lastname: lastname,
+              gender: id_num[-2].to_i.even? ? '女' : '男',
+              birthday: year + '-' + month + '-' + day,
+              id_num: id_num,
+              email: email,
+              cellphone: cellphone,
+              employer: employer,
+              occupation: occupation,
+              position: position,
+              province: province ? province : '四川省',
+              city: city ? city : '成都市',
+              address: address,
+              zipcode: zipcode
+              )
+          end
           correctProfiles << [
             firstname,
             lastname,
@@ -248,7 +250,7 @@ class Profile < ApplicationRecord
       end # data.each
 
       # 结果输出 csv
-      CSV.open('/Users/spiderevgn/project/metlife/error/xlsx_import_errors_' + file_name + '.csv', "wb") do |csv|
+      CSV.open('/Users/spiderevgn/project/metlife/import_results/xlsx_import_result_' + file_name + '.csv', "wb") do |csv|
         csv << %W[姓名 身份证 电话]
         correctProfiles.each do |pf|
           csv << pf
