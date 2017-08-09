@@ -118,6 +118,10 @@ class Profile < ApplicationRecord
       # 当前表内数据查重
       data_all.each_with_index do |row, index|
         data_all[index+1..-1].each do |next_row|
+          # 判断是否已经重复，则跳过
+          if next_row[11]
+            next
+          end
           if row[1] == next_row[1]
             next_row[11] = '表内：身份证与'+row[0]+'重复'
             row_repeat_checkpoint = 1
