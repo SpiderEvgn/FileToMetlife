@@ -76,8 +76,8 @@ class Profile < ApplicationRecord
   end
 
   class << self
-    def import_csv
-      content = CSV.read('/Users/spiderevgn/project/metlife/2017_06_25_2.csv')
+    def import_csv(file_name)
+      content = CSV.read('/app/import_data/' + file_name + '.csv')
       content.shift
       content.each do |row|
         Profile.create(
@@ -100,7 +100,7 @@ class Profile < ApplicationRecord
     end
 
     def import_xlsx(file_name)
-      content = Roo::Spreadsheet.open('/Users/spiderevgn/project/metlife/import_data/' + file_name + '.xlsx')
+      content = Roo::Spreadsheet.open('/app/import_data/' + file_name + '.xlsx')
       data_all = content.sheet('Sheet1').to_a
       data_all.shift
       # 去空格
@@ -248,7 +248,7 @@ class Profile < ApplicationRecord
       end # data.each
 
       # 结果输出 csv
-      CSV.open('/Users/spiderevgn/project/metlife/error/xlsx_import_errors_' + file_name + '.csv', "wb") do |csv|
+      CSV.open('/app/xlsx_import_results_' + file_name + '.csv', "wb") do |csv|
         csv << %W[姓名 身份证 电话]
         correctProfiles.each do |pf|
           csv << pf
@@ -261,8 +261,8 @@ class Profile < ApplicationRecord
     end # def
 
     def start_to_send(start_num)
-      # Profile.find_each(batch_size: 100, start: 5936, finish: 5918) do |pf|
       Profile.find_each(start: start_num) do |pf|
+      # Profile.find_each(batch_size: 100, start: 5936, finish: 5918) do |pf|
         # pf = Profile.find(start_num);
         ['PC0000000139', 'PC0000000151', 'PC0000000150', 'PC0000000167'].each do |present_code|
           response = Profile.send_to_metlife(pf, present_code)
