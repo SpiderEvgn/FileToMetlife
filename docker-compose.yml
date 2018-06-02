@@ -2,9 +2,10 @@ version: '3'
 services:
   db:
     image: postgres
+    volumes:
+      - ./db_data:/var/lib/postgresql/data
   web:
-    build: .
-    # iamge: registry.cn-shanghai.aliyuncs.com/aaron_dev/ruby_nodejs
+    image: registry.cn-shanghai.aliyuncs.com/aaron_dev/file-to-metlife
     command: bash -c "rm -f /app/tmp/pids/server.pid && rails s -p 3000 -b 0.0.0.0"
     volumes:
       - .:/app
