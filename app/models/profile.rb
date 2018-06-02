@@ -99,7 +99,7 @@ class Profile < ApplicationRecord
       end
     end
 
-    def import_xlsx(file_name)
+    def import_xlsx(file_name, is_store=nil)
       content = Roo::Spreadsheet.open('/app/import_data/' + file_name + '.xlsx')
       data_all = content.sheet('Sheet1').to_a
       data_all.shift
@@ -118,6 +118,10 @@ class Profile < ApplicationRecord
       # 当前表内数据查重
       data_all.each_with_index do |row, index|
         data_all[index+1..-1].each do |next_row|
+          # 判断是否已经重复，则跳过
+          if next_row[11]
+            next
+          end
           if row[1] == next_row[1]
             next_row[11] = '表内：身份证与'+row[0]+'重复'
             row_repeat_checkpoint = 1
@@ -208,22 +212,24 @@ class Profile < ApplicationRecord
           # 姓名识别（已经判断过复姓）
           firstname = firstname != '' ? firstname : fullname[0]
           lastname = lastname != '' ? lastname : fullname[1..-1]
-          Profile.create(
-            firstname: firstname,
-            lastname: lastname,
-            gender: id_num[-2].to_i.even? ? '女' : '男',
-            birthday: year + '-' + month + '-' + day,
-            id_num: id_num,
-            email: email,
-            cellphone: cellphone,
-            employer: employer,
-            occupation: occupation,
-            position: position,
-            province: province ? province : '四川省',
-            city: city ? city : '成都市',
-            address: address,
-            zipcode: zipcode
-            )
+          if is_store
+            Profile.create(
+              firstname: firstname,
+              lastname: lastname,
+              gender: id_num[-2].to_i.even? ? '女' : '男',
+              birthday: year + '-' + month + '-' + day,
+              id_num: id_num,
+              email: email,
+              cellphone: cellphone,
+              employer: employer,
+              occupation: occupation,
+              position: position,
+              province: province ? province : '四川省',
+              city: city ? city : '成都市',
+              address: address,
+              zipcode: zipcode
+              )
+          end
           correctProfiles << [
             firstname,
             lastname,
@@ -248,7 +254,7 @@ class Profile < ApplicationRecord
       end # data.each
 
       # 结果输出 csv
-      CSV.open('/app/xlsx_import_results_' + file_name + '.csv', "wb") do |csv|
+      CSV.open('/app/import_results/import_results_' + file_name + '.csv', "wb") do |csv|
         csv << %W[姓名 身份证 电话]
         correctProfiles.each do |pf|
           csv << pf
