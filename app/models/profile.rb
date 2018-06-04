@@ -108,8 +108,14 @@ class Profile < ApplicationRecord
         11.times do |index|
           row[index] ? row[index] = row[index].to_s.gsub(' ','') : row[index]
           row[index] ? row[index] = row[index].to_s.gsub('　','') : row[index]
+          # 手机号去 -
+          if index == 3
+            row[index] = row[index].to_s.gsub('-','')
+            row[index] = row[index].to_s.gsub('－','')
+          end
         end
       end
+
       correctProfiles = []
       errorProfiles = []
       row_repeat_checkpoint = 0
@@ -405,12 +411,12 @@ class Profile < ApplicationRecord
       end
     end
 
-    def convert_wrong_unicode_to_chinese
-      Profile.find_each(batch_size: 500) do |pf|
+    def convert_wrong_unicode_to_chinese(start_num)
+      Profile.find_each(start: start_num) do |pf|
         ['PC139', 'PC151', 'PC150', 'PC167'].each do |code|
-          if pf.send("#{code}").include?('&#x5BFC;&#x5165')
+          if pf.send("#{code}").include?('&#x5DF2;&#x6709;&#x8D60;&#x9669;&#x8BB0;&#x5F55;')
             pf.update("#{code}": '客户已有赠险记录,无法导入!!')
-          elsif pf.send("#{code}").include?('&#x4E8E;18&#x4F4D;')
+          elsif pf.send("#{code}").include?('&#x5C0F;&#x4E8E;18&#x4F4D;')
             pf.update("#{code}": '身份证号长度不能小于18位!!')
           end
         end
