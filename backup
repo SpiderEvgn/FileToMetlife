@@ -1,0 +1,1 @@
+docker exec filetometlife_db_1 -it pg_dump -U postgres FileToMetlife_development > /var/lib/postgresql/data/profile.sql
