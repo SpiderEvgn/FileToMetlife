@@ -1,6 +1,6 @@
 docker exec -it filetometlife_web_1 rails db:create
 docker exec -it filetometlife_web_1 rails db:migrate
-cp profile.sql db_data
+cp profile.sql ../db/FileToMetlife/
 
 # 下面这条命令报错，要先进入 db container 后再手动执行 psql 导入数据库
 # docker exec -it filetometlife_db_1 psql -U postgres FileToMetlife_development < /var/lib/postgresql/data/profile.sql
