@@ -1,3 +1,4 @@
+docker-compose up -d
 docker exec -it filetometlife_web_1 rails db:create
 docker exec -it filetometlife_web_1 rails db:migrate
 cp profile.sql ../db/FileToMetlife/

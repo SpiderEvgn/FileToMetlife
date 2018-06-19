@@ -123,7 +123,7 @@ ALTER TABLE ONLY public.profiles ALTER COLUMN id SET DEFAULT nextval('public.pro
 --
 
 COPY public.ar_internal_metadata (key, value, created_at, updated_at) FROM stdin;
-environment	development	2018-06-15 08:34:53.247308	2018-06-15 08:34:53.247308
+environment	development	2018-06-18 09:56:13.109585	2018-06-18 09:56:13.109585
 \.
 
 
@@ -322,6 +322,9 @@ COPY public.profiles (id, firstname, lastname, gender, birthday, id_num, email, 
 188	王	永平	男	1971-10-21	522701197110211256	\N	13985771658	\N	\N	\N	四川省	成都市	\N	\N	TRUE	TRUE	TRUE	TRUE	2018-06-15 08:36:47.676777	2018-06-15 08:36:47.676777
 189	付	兴筑	男	1964-05-25	52010219640525201X	\N	18985544607	\N	\N	\N	四川省	成都市	\N	\N	TRUE	TRUE	TRUE	TRUE	2018-06-15 08:36:47.738991	2018-06-15 08:36:47.738991
 190	田	维刚	男	1967-10-13	520111196710130074	\N	13885461211	\N	\N	\N	四川省	成都市	\N	\N	TRUE	TRUE	TRUE	TRUE	2018-06-15 08:36:47.786931	2018-06-15 08:36:47.786931
+191	陈	东	男	1995-03-24	50022819950324053X	\N	13628223637	\N	\N	\N	四川省	成都市	\N	\N	TRUE	TRUE	TRUE	TRUE	2018-06-19 06:38:04.092626	2018-06-19 06:38:42.022128
+192	李	阳	男	1993-06-27	411322199306270015	\N	15136161662	\N	\N	\N	四川省	成都市	\N	\N	TRUE	TRUE	TRUE	TRUE	2018-06-19 06:38:04.147937	2018-06-19 06:38:43.282245
+193	李	震雷	男	1995-03-03	330726199503030332	\N	15682536310	\N	\N	\N	四川省	成都市	\N	\N	TRUE	TRUE	TRUE	TRUE	2018-06-19 06:38:04.183413	2018-06-19 06:38:45.062238
 \.
 
 
@@ -338,7 +341,7 @@ COPY public.schema_migrations (version) FROM stdin;
 -- Name: profiles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.profiles_id_seq', 190, true);
+SELECT pg_catalog.setval('public.profiles_id_seq', 193, true);
 
 
 --
