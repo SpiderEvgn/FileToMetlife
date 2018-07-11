@@ -402,10 +402,10 @@ class Profile < ApplicationRecord
       return 'AiShanXing' + DateTime.current.in_time_zone('Beijing').to_s(:number) + ('0'..'9').to_a.shuffle[0..3].join
     end
 
-    def to_csv
-      CSV.open("/Users/spiderevgn/project/metlife/response_0422.csv", "wb") do |csv|
+    def to_csv file_name, start_num
+      CSV.open('/app/import_results/' + file_name + '.csv', "wb") do |csv|
         csv << FILE_HEADER
-        Profile.find_each(start: 5960) do |pf|
+        Profile.find_each(start: start_num) do |pf|
           csv << pf.profile_row_info
         end
       end
