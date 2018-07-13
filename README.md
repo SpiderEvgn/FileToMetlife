@@ -28,3 +28,7 @@
 8. 将返回的错误结果由 utf8 转码为中文
 
         Profile.convert_wrong_unicode_to_chinese 1001
+
+9. 将结果导出 csv
+ 
+        Profile.to_csv 'file_name', 1001      # 自定义文件名，将本次传送数据全部导出到 csv，方便观察结果
