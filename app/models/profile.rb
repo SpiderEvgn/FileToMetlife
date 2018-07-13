@@ -403,7 +403,7 @@ class Profile < ApplicationRecord
     end
 
     def to_csv file_name, start_num
-      CSV.open('/app/import_results/' + file_name + '.csv', "wb") do |csv|
+      CSV.open('/app/import_results/response_' + file_name + '.csv', "wb") do |csv|
         csv << FILE_HEADER
         Profile.find_each(start: start_num) do |pf|
           csv << pf.profile_row_info
